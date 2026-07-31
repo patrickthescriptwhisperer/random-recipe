@@ -1,0 +1,15 @@
+.venv
+__pycache__
+*.pyc
+.pytest_cache
+.coverage
+htmlcov
+.git
+.idea
+*.iml
+tests
+requirements-dev.txt
+README.md
+.dockerignore
+.gitignore
+data/recipes.json

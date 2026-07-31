@@ -1,0 +1,18 @@
+services:
+  random-recipe:
+    image: ghcr.io/patrickthescriptwhisperer/random-recipe:latest
+    build: .
+    ports:
+      # Prefer keeping this off the public internet; put Caddy/SWAG in front.
+      - "8000:8000"
+    # Optional: run as a fixed uid:gid and skip entrypoint remapping/chown.
+    # user: "${PUID:-1000}:${PGID:-1000}"
+    environment:
+      PUID: ${PUID:-1000}
+      PGID: ${PGID:-1000}
+      SECRET_KEY: ${SECRET_KEY:-change-me-in-production}
+      # Default is readonly. Set to true only if you intentionally want Add/Import online.
+      ALLOW_PUBLIC_RECIPE_EDITS: ${ALLOW_PUBLIC_RECIPE_EDITS:-false}
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
