@@ -1,0 +1,23 @@
+[
+  {
+    "id": "banana-porridge",
+    "title": "Banana porridge",
+    "ages": ["around_6_months", "7_to_9_months"],
+    "meal_types": ["breakfast"],
+    "prep_time": "5 mins",
+    "cook_time": "10 mins",
+    "portions": "2 portions",
+    "ingredients": [
+      "1 ripe banana",
+      "2 tbsp porridge oats",
+      "Breast milk, first infant formula, or water to loosen"
+    ],
+    "steps": [
+      "Simmer the oats in a little water until soft.",
+      "Mash the banana and stir into the porridge.",
+      "Loosen with milk or water to a texture your baby can manage."
+    ],
+    "notes": "Replace this example with recipes from books you own.",
+    "source": "Example only"
+  }
+]

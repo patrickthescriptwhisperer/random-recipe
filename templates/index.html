@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Random Recipe</title>
+  <script>
+    (function () {
+      try {
+        var theme = localStorage.getItem("random-recipe-theme");
+        document.documentElement.setAttribute(
+          "data-theme",
+          theme === "light" ? "light" : "dark"
+        );
+      } catch (error) {
+        document.documentElement.setAttribute("data-theme", "dark");
+      }
+    })();
+  </script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Source+Sans+3:wght@400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+  <header class="top-bar">
+    <div class="top-bar-inner">
+      <div class="top-bar-awake">
+        <label class="keep-awake-label">
+          <input type="checkbox" id="dark-mode" checked>
+          <span>Dark mode</span>
+        </label>
+        <label class="keep-awake-label">
+          <input type="checkbox" id="keep-awake">
+          <span>Keep screen awake</span>
+        </label>
+        <p class="keep-awake-status" id="keep-awake-status" aria-live="polite"></p>
+      </div>
+      <div class="top-bar-actions">
+        <button
+          class="btn primary"
+          type="submit"
+          form="filters"
+          {% if recipe %}name="exclude" value="{{ recipe.id }}"{% endif %}
+        >New recipe</button>
+        {% if can_edit %}
+        <a class="btn secondary" href="#add-recipe" id="open-add-recipe">Add</a>
+        <a class="btn secondary" href="#import" id="open-import">Import</a>
+        {% endif %}
+      </div>
+    </div>
+  </header>
+
+  <div class="page">
+    <header class="hero">
+      <p class="brand">Random Recipe</p>
+      <h1>Today’s recipe</h1>
+      <p class="lede">Pick an age and meal type, then get one idea at random from your kitchen list.</p>
+    </header>
+
+    <form class="filters" id="filters" method="get" action="{{ url_for('index') }}">
+      <label>
+        <span>Age</span>
+        <select name="age">
+          <option value="" {% if not age %}selected{% endif %}>Any</option>
+          {% for value in ages %}
+          <option value="{{ value }}" {% if age == value %}selected{% endif %}>{{ age_labels[value] }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>
+        <span>Meal type</span>
+        <select name="meal_type">
+          <option value="" {% if not meal_type %}selected{% endif %}>Any</option>
+          {% for value in meal_types %}
+          <option value="{{ value }}" {% if meal_type == value %}selected{% endif %}>{{ meal_type_labels[value] }}</option>
+          {% endfor %}
+        </select>
+      </label>
+    </form>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <ul class="flash-list">
+      {% for category, message in messages %}
+      <li class="flash flash-{{ category }}">{{ message }}</li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+    {% endwith %}
+
+    <main class="recipe-panel" aria-live="polite">
+      {% if empty_reason == "no_data" %}
+      <div class="empty">
+        <h2>No recipes yet</h2>
+        {% if can_edit %}
+        <p>Add a recipe below, import a JSON file, or edit <code>data/recipes.json</code>.</p>
+        {% else %}
+        <p>No recipes are available yet. Editing is disabled while the app is in readonly mode.</p>
+        {% endif %}
+      </div>
+      {% elif empty_reason == "no_match" %}
+      <div class="empty">
+        <h2>No recipes match</h2>
+        <p>Try a different age or meal type, or add more recipes to your list.</p>
+      </div>
+      {% elif recipe %}
+      <article class="recipe">
+        <h2>{{ recipe.title }}</h2>
+        <ul class="tags">
+          {% for value in recipe.ages %}
+          <li>{{ age_labels.get(value, value) }}</li>
+          {% endfor %}
+          {% for value in recipe.meal_types %}
+          <li>{{ meal_type_labels.get(value, value) }}</li>
+          {% endfor %}
+        </ul>
+
+        {% if recipe.prep_time or recipe.cook_time or recipe.portions %}
+        <ul class="timing">
+          {% if recipe.prep_time %}<li><span>Prep</span> {{ recipe.prep_time }}</li>{% endif %}
+          {% if recipe.cook_time %}<li><span>Cook</span> {{ recipe.cook_time }}</li>{% endif %}
+          {% if recipe.portions %}<li><span>Portions</span> {{ recipe.portions }}</li>{% endif %}
+        </ul>
+        {% endif %}
+
+        <section>
+          <h3>Ingredients</h3>
+          <ul>
+            {% for item in recipe.ingredients %}
+            <li>{{ item }}</li>
+            {% endfor %}
+          </ul>
+        </section>
+
+        <section>
+          <h3>Steps</h3>
+          <ol>
+            {% for step in recipe.steps %}
+            <li>{{ step }}</li>
+            {% endfor %}
+          </ol>
+        </section>
+
+        {% if recipe.notes %}
+        <p class="notes">{{ recipe.notes }}</p>
+        {% endif %}
+        {% if recipe.source %}
+        <p class="source">Source: {{ recipe.source }}</p>
+        {% endif %}
+        {% if match_count > 1 %}
+        <p class="meta">{{ match_count }} recipes match these filters</p>
+        {% endif %}
+      </article>
+      {% endif %}
+    </main>
+
+    {% if can_edit %}
+    <details class="form-panel" id="add-recipe">
+      <summary class="form-summary">
+        <span class="form-summary-title">Add a recipe</span>
+        <span class="form-summary-hint">Tap to expand</span>
+      </summary>
+      <p class="form-lede">Fill in the fields below. Ingredients and steps are one item per line. Ages and meal types can be multi-select.</p>
+      <form class="add-form" method="post" action="{{ url_for('create_recipe') }}">
+        <label>
+          <span>Title</span>
+          <input type="text" name="title" required placeholder="Banana porridge" autocomplete="off">
+        </label>
+
+        <fieldset class="choice-set">
+          <legend>Ages</legend>
+          <div class="choice-grid">
+            {% for value in ages %}
+            <label class="choice">
+              <input type="checkbox" name="ages" value="{{ value }}">
+              <span>{{ age_labels[value] }}</span>
+            </label>
+            {% endfor %}
+          </div>
+        </fieldset>
+
+        <fieldset class="choice-set">
+          <legend>Meal types</legend>
+          <div class="choice-grid">
+            {% for value in meal_types %}
+            <label class="choice">
+              <input type="checkbox" name="meal_types" value="{{ value }}">
+              <span>{{ meal_type_labels[value] }}</span>
+            </label>
+            {% endfor %}
+          </div>
+        </fieldset>
+
+        <label>
+          <span>Prep time (optional)</span>
+          <input type="text" name="prep_time" placeholder="10 mins" autocomplete="off">
+        </label>
+        <label>
+          <span>Cook time (optional)</span>
+          <input type="text" name="cook_time" placeholder="15 mins" autocomplete="off">
+        </label>
+        <label class="full">
+          <span>Portions (optional)</span>
+          <input type="text" name="portions" placeholder="4 portions" autocomplete="off">
+        </label>
+
+        <label class="full">
+          <span>Ingredients (one per line)</span>
+          <textarea name="ingredients" rows="4" required placeholder="1 banana&#10;2 tbsp oats"></textarea>
+        </label>
+        <label class="full">
+          <span>Steps (one per line)</span>
+          <textarea name="steps" rows="4" required placeholder="Cook oats&#10;Mash banana and stir in"></textarea>
+        </label>
+        <label class="full">
+          <span>Notes (optional)</span>
+          <textarea name="notes" rows="2" placeholder="Optional tip or allergen note"></textarea>
+        </label>
+        <label class="full">
+          <span>Source (optional)</span>
+          <input type="text" name="source" placeholder="My weaning book, p.42" autocomplete="off">
+        </label>
+
+        <div class="actions full">
+          <button type="submit" class="btn primary">Add recipe</button>
+        </div>
+      </form>
+    </details>
+
+    <details class="import-panel" id="import">
+      <summary class="form-summary">
+        <span class="form-summary-title">Import recipes</span>
+        <span class="form-summary-hint">Tap to expand</span>
+      </summary>
+      <p class="import-lede">
+        Upload a JSON array of recipes. This <strong>replaces</strong> the current list
+        {% if recipe_count %}({{ recipe_count }} recipe{% if recipe_count != 1 %}s{% endif %}){% endif %}.
+      </p>
+      <form class="import-form" method="post" action="{{ url_for('import_recipes') }}" enctype="multipart/form-data">
+        <label class="file-label">
+          <span>JSON file</span>
+          <input type="file" name="recipes_file" accept=".json,application/json" required>
+        </label>
+        <button type="submit" class="btn secondary">Import and replace</button>
+      </form>
+    </details>
+    {% endif %}
+
+    <footer class="footer">
+      <p>
+        Recipes come from your own books and notes.
+      </p>
+    </footer>
+  </div>
+  <script src="{{ url_for('static', filename='theme.js') }}"></script>
+  <script src="{{ url_for('static', filename='wake-lock.js') }}"></script>
+  {% if can_edit %}
+  <script src="{{ url_for('static', filename='import.js') }}"></script>
+  {% endif %}
+</body>
+</html>
